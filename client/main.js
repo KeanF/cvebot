@@ -1,22 +1,53 @@
+import { Session } from 'meteor/session'
 import { Template } from 'meteor/templating';
 import { ReactiveVar } from 'meteor/reactive-var';
 
 import './main.html';
 
-Template.hello.onCreated(function helloOnCreated() {
-  // counter starts at 0
-  this.counter = new ReactiveVar(0);
+Template.searchBar.onCreated(function searchBarOnCreated() {
+  this.inputText = new ReactiveVar('');  
+  this.result = new ReactiveVar('');
 });
 
-Template.hello.helpers({
-  counter() {
-    return Template.instance().counter.get();
+Template.searchBar.helpers({
+  inputText() {
+    return Session.get('input') || '';
+  },
+  result() {
+    return Session.get('result') || [];
   },
 });
 
-Template.hello.events({
-  'click button'(event, instance) {
-    // increment the counter when button is clicked
-    instance.counter.set(instance.counter.get() + 1);
+Template.searchBar.events({
+  'input .search'(event, instance) {
+    event.preventDefault();
+
+    const target = event.target;
+    const input = target.value;
+
+    Session.set('input', input);
+  },
+  'submit .search'(event, instance) {
+    event.preventDefault();
+
+    // Hold relevant fields
+    const target = event.target;
+    const cveName = target.text.value;
+
+    // Change text depending on what is entered
+    instance.inputText.set(cveName);
+
+    // Clear the search bar
+    target.text.value = '';
+
+    // Now call to server to get our CVEs...
+    Meteor.call('fetchCVE', cveName, function(error, response) {
+      if (error) {
+        window.alert(`error: ${error.reason}`);
+        console.log(`Error occured on receiving data on server. ${error}`);
+      } else {
+        Session.set('result', response);
+      }
+    });
   },
 });
